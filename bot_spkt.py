@@ -168,13 +168,22 @@ def jalankan_robot_spkt():
                 # Isi Nama pejabat pelaksana
                 page.get_by_label("Nama dan pangkat pejabat pelaksana").fill(nama_petugas)
 
-                # SEMUA KOTAK ANGKA WAJIB DIISI DIISI DENGAN "0"
+                # SEMUA KOTAK ANGKA DIISI "0"
                 num_inputs = page.locator("input[type='number']")
                 for i in range(num_inputs.count()):
                     try:
                         num_inputs.nth(i).fill("0")
                     except Exception:
                         pass
+
+                # HAPUS / TUTUP KOTAK SARAN JIKA MUNCUL (Agar tidak wajib diisi uraiannya)
+                try:
+                    tombol_hapus_saran = page.locator("button").filter(has_text="×")
+                    if tombol_hapus_saran.count() > 0:
+                        tombol_hapus_saran.first.click()
+                        page.wait_for_timeout(1000)
+                except Exception:
+                    pass
 
                 # Khusus QW4.4: pastikan tombol "Ada" terpilih
                 if kode == "QW4.4":
