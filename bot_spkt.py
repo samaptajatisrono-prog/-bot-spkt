@@ -27,14 +27,14 @@ def ambil_petugas_piket_hari_ini():
     return DAFTAR_REGU_SPKT[indeks_regu], indeks_regu + 1
 
 # ==========================================================
-# 2. LINK FOLDER GOOGLE DRIVE SPKT
-# Silakan ganti dengan link folder Google Drive SPKT Anda
+# 2. LINK FOLDER GOOGLE DRIVE SPKT (QW4.1 s/d QW4.4)
+# Silakan ganti link di bawah dengan link folder Google Drive Anda
 # ==========================================================
 FOLDER_URLS = {
-    "qw4_1": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT",
-    "qw4_2": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT",
-    "qw4_3": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT",
-    "qw4_4": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT",
+    "qw4_1": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT_QW4_1",
+    "qw4_2": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT_QW4_2",
+    "qw4_3": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT_QW4_3",
+    "qw4_4": "https://drive.google.com/drive/folders/GANTI_DENGAN_LINK_FOLDER_SPKT_QW4_4",
 }
 
 DAFTAR_KEGIATAN_SPKT = [
