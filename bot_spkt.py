@@ -35,7 +35,7 @@ DAFTAR_REGU_SPKT = [
     },
 ]
 
-# 4 Kegiatan Harian SPKT (Memakai 4 Foto Berbeda Tiap Hari)
+# 4 Kegiatan Harian SPKT
 DAFTAR_KEGIATAN_SPKT = [
     {"kode": "QW4.1", "nama": "Pamapta hadir dan penanganan ke TKP"},
     {"kode": "QW4.2", "nama": "Petugas Yanmas menerima laporan dan aduan di SPKT"},
@@ -44,13 +44,10 @@ DAFTAR_KEGIATAN_SPKT = [
 ]
 
 def hitung_jadwal_regu_hari_ini():
-    """Menentukan regu yang piket hari ini dan urutan piket ke-berapa bagi regu tersebut."""
     wib_sekarang = datetime.now(timezone(timedelta(hours=7))).date()
     selisih_hari = max(0, (wib_sekarang - TANGGAL_PATOKAN).days)
-    
     indeks_regu = selisih_hari % len(DAFTAR_REGU_SPKT)
-    putaran_piket_regu = selisih_hari // len(DAFTAR_REGU_SPKT)  # Piket ke-0, 1, 2, dst.
-    
+    putaran_piket_regu = selisih_hari // len(DAFTAR_REGU_SPKT)
     return DAFTAR_REGU_SPKT[indeks_regu], putaran_piket_regu
 
 def kirim_notif_telegram(pesan, foto_path=None):
@@ -70,8 +67,6 @@ def kirim_notif_telegram(pesan, foto_path=None):
             print(f"Gagal kirim ke Telegram ({cid}):", e)
 
 def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
-    """Memindai 40 foto di dalam folder Regu yang bertugas, lalu mengambil 4 foto
-    berurutan untuk QW4.1, QW4.2, QW4.3, dan QW4.4 sesuai putaran piketnya."""
     folder_id = folder_url.rstrip("/").split("/")[-1].split("?")[0]
     embed_url = f"https://drive.google.com/embeddedfolderview?id={folder_id}#list"
 
@@ -88,7 +83,6 @@ def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
                 seen.add(fid)
                 file_links.append(f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk")
 
-        # Cadangan: buka via browser Playwright jika belum terbaca
         if not file_links:
             page.goto(embed_url, timeout=60000, wait_until="domcontentloaded")
             page.wait_for_timeout(3000)
@@ -105,7 +99,7 @@ def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
 
     if file_links:
         total_foto = len(file_links)
-        base_idx = putaran_piket * 4  # Setiap kali piket bergeser 4 foto (1-4, 5-8, 9-12, dst.)
+        base_idx = putaran_piket * 4
         hasil_4_foto = []
         for i in range(4):
             idx_terpilih = (base_idx + i) % total_foto
@@ -123,7 +117,7 @@ def jalankan_robot_spkt():
     kirim_notif_telegram(
         f"🤖 Robot SPKT Polsek Jatisrono mulai berjalan...\n"
         f"👮 Piket Hari Ini: Regu {nomor_regu} ({nama_petugas})\n"
-        f"🔄 Putaran Piket ke-{putaran_piket + 1} (Mengambil 4 foto berurutan dari Folder Regu {nomor_regu})"
+        f"🔄 Putaran Piket ke-{putaran_piket + 1} (Mengambil 4 foto berurutan)"
     )
     
     with sync_playwright() as p:
@@ -139,40 +133,30 @@ def jalankan_robot_spkt():
         page = context.new_page()
 
         try:
-            # 1. Ambil 4 link foto berbeda dari folder Regu yang sedang piket hari ini
             empat_foto = ambil_4_foto_harian_regu(page, folder_url, putaran_piket)
 
-            # 2. Buka halaman Posko PBM
             page.goto("https://poskopbm.polri.go.id/input", timeout=60000, wait_until="domcontentloaded")
             page.wait_for_timeout(3000)
 
-            # 3. Login jika diminta
             if page.locator("input[type='password']").count() > 0:
                 page.locator("input[type='email'], input[type='text']").first.fill(EMAIL)
                 page.locator("input[type='password']").first.fill(PASSWORD)
                 page.get_by_role("button", name="Masuk").click()
                 page.wait_for_timeout(5000)
 
-            # 4. Isi Nama Pelapor & Pilih Jabatan "Ka SPKT (6 kegiatan)"
             page.get_by_label("Nama dan pangkat pelapor").fill(nama_petugas)
             page.locator("select").first.select_option(label="Ka SPKT (6 kegiatan)")
             page.wait_for_timeout(2500)
 
-            # 5. Buka daftar kegiatan QW4 (Klik tombol "Isi laporan" urutan pertama untuk QW4)
             if page.get_by_role("button", name="Isi laporan").count() > 0:
                 page.get_by_role("button", name="Isi laporan").first.click()
                 page.wait_for_timeout(2000)
-            else:
-                page.get_by_text("110 Respons Cepat").first.click()
-                page.wait_for_timeout(2000)
 
-            # 6. Looping isi dan kirim keempat laporan SPKT (QW4.1 s/d QW4.4)
             for idx, item in enumerate(DAFTAR_KEGIATAN_SPKT):
                 kode = item["kode"]
                 nama_giat = item["nama"]
                 link_foto, no_foto, tot_foto = empat_foto[idx]
 
-                # Pastikan daftar QW4.1-QW4.4 terbuka, lalu klik nama kegiatannya
                 if not page.get_by_text(nama_giat).first.is_visible():
                     if page.get_by_role("button", name="Isi laporan").count() > 0:
                         page.get_by_role("button", name="Isi laporan").first.click()
@@ -181,8 +165,16 @@ def jalankan_robot_spkt():
                 page.get_by_text(nama_giat).first.click()
                 page.wait_for_timeout(2000)
 
-                # Isi b. Nama dan pangkat pejabat pelaksana
+                # Isi Nama pejabat pelaksana
                 page.get_by_label("Nama dan pangkat pejabat pelaksana").fill(nama_petugas)
+
+                # SEMUA KOTAK ANGKA WAJIB DIISI DIISI DENGAN "0"
+                num_inputs = page.locator("input[type='number']")
+                for i in range(num_inputs.count()):
+                    try:
+                        num_inputs.nth(i).fill("0")
+                    except Exception:
+                        pass
 
                 # Khusus QW4.4: pastikan tombol "Ada" terpilih
                 if kode == "QW4.4":
@@ -190,7 +182,7 @@ def jalankan_robot_spkt():
                     if tombol_ada.count() > 0:
                         tombol_ada.first.click()
 
-                # Isi Dokumentasi kegiatan (Link Google Drive)
+                # Isi Link Google Drive
                 page.locator("input[placeholder*='drive.google.com']").fill(link_foto)
                 page.wait_for_timeout(1000)
 
