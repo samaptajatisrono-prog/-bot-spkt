@@ -12,7 +12,7 @@ TG_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
 DEFAULT_LINK = "https://drive.google.com/file/d/17KmVFmPU-OZk0dBdbVgF7AZ6ayhGWPyl/view?usp=drivesdk"
 
 # ==========================================================
-# 1. KONFIGURASI 3 REGU PIKET SPKT & LINK FOLDER (40 FOTO)
+# 1. KONFIGURASI 3 REGU PIKET SPKT & LINK FOLDER
 # Patokan mulai: 28 Oktober 2026 = Regu 1 (AIPTU SUTARMAN)
 # ==========================================================
 TANGGAL_PATOKAN = date(2026, 10, 28)
@@ -35,12 +35,38 @@ DAFTAR_REGU_SPKT = [
     },
 ]
 
-# 4 Kegiatan Harian SPKT
+# 6 Kegiatan Harian Ka SPKT (4 kegiatan QW4 + QW3.2 + QW5.2)
 DAFTAR_KEGIATAN_SPKT = [
-    {"kode": "QW4.1", "nama": "Pamapta hadir dan penanganan ke TKP"},
-    {"kode": "QW4.2", "nama": "Petugas Yanmas menerima laporan dan aduan di SPKT"},
-    {"kode": "QW4.3", "nama": "Respons cepat panggilan 110"},
-    {"kode": "QW4.4", "nama": "Layanan ramah perempuan dan anak"},
+    {
+        "kode": "QW4.1",
+        "tab": "110 Respons Cepat, SPKT Ramah Korban",
+        "nama": "Pamapta hadir dan penanganan ke TKP"
+    },
+    {
+        "kode": "QW4.2",
+        "tab": "110 Respons Cepat, SPKT Ramah Korban",
+        "nama": "Petugas Yanmas menerima laporan dan aduan di SPKT"
+    },
+    {
+        "kode": "QW4.3",
+        "tab": "110 Respons Cepat, SPKT Ramah Korban",
+        "nama": "Respons cepat panggilan 110"
+    },
+    {
+        "kode": "QW4.4",
+        "tab": "110 Respons Cepat, SPKT Ramah Korban",
+        "nama": "Layanan ramah perempuan dan anak"
+    },
+    {
+        "kode": "QW3.2",
+        "tab": "Bersih Judi Daring dan Penipuan Digital",
+        "nama": "Layanan aduan korban penipuan daring"
+    },
+    {
+        "kode": "QW5.2",
+        "tab": "Perkara Terlacak, SP2HP Pasti",
+        "nama": "Layanan informasi perkara"
+    },
 ]
 
 def hitung_jadwal_regu_hari_ini():
@@ -53,6 +79,7 @@ def hitung_jadwal_regu_hari_ini():
 def kirim_notif_telegram(pesan, foto_path=None):
     if not TG_TOKEN or not TG_CHAT_ID:
         return
+    # Otomatis mengirim ke 3 User ID (atau lebih) yang dipisahkan koma (,)
     daftar_chat_id = [cid.strip() for cid in TG_CHAT_ID.split(",") if cid.strip()]
     for cid in daftar_chat_id:
         try:
@@ -66,9 +93,10 @@ def kirim_notif_telegram(pesan, foto_path=None):
         except Exception as e:
             print(f"Gagal kirim ke Telegram ({cid}):", e)
 
-def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
-    folder_id = folder_url.rstrip("/").split("/")[-1].split("?")[0]
-    embed_url = f"https://drive.google.com/embeddedfolderview?id={folder_id}#list"
+def ambil_6_foto_harian_regu(page, folder_url, putaran_piket):
+    jumlah_giat = len(DAFTAR_KEGIATAN_SPKT)
+    kode_utama = folder_url.rstrip("/").split("/")[-1].split("?")[0]
+    embed_url = f"https://drive.google.com/embeddedfolderview?id={kode_utama}#list"
 
     file_links = []
     seen = set()
@@ -77,11 +105,11 @@ def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
         ids = re.findall(r"/file/d/([a-zA-Z0-9_-]{25,})/", res.text)
         if not ids:
             ids = re.findall(r'id="entry-([a-zA-Z0-9_-]{25,})"', res.text)
-        
-        for fid in ids:
-            if fid != folder_id and fid not in seen:
-                seen.add(fid)
-                file_links.append(f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk")
+
+        for item_id in ids:
+            if item_id != kode_utama and item_id not in seen:
+                seen.add(item_id)
+                file_links.append(f"https://drive.google.com/file/d/{item_id}/view?usp=drivesdk")
 
         if not file_links:
             page.goto(embed_url, timeout=60000, wait_until="domcontentloaded")
@@ -90,23 +118,23 @@ def ambil_4_foto_harian_regu(page, folder_url, putaran_piket):
             ids2 = re.findall(r"/file/d/([a-zA-Z0-9_-]{25,})/", html)
             if not ids2:
                 ids2 = re.findall(r'id="entry-([a-zA-Z0-9_-]{25,})"', html)
-            for fid in ids2:
-                if fid != folder_id and fid not in seen:
-                    seen.add(fid)
-                    file_links.append(f"https://drive.google.com/file/d/{fid}/view?usp=drivesdk")
+            for item_id in ids2:
+                if item_id != kode_utama and item_id not in seen:
+                    seen.add(item_id)
+                    file_links.append(f"https://drive.google.com/file/d/{item_id}/view?usp=drivesdk")
     except Exception as e:
         print("Gagal memindai folder Google Drive:", e)
 
     if file_links:
         total_foto = len(file_links)
-        base_idx = putaran_piket * 4
-        hasil_4_foto = []
-        for i in range(4):
+        base_idx = putaran_piket * jumlah_giat
+        hasil_foto = []
+        for i in range(jumlah_giat):
             idx_terpilih = (base_idx + i) % total_foto
-            hasil_4_foto.append((file_links[idx_terpilih], idx_terpilih + 1, total_foto))
-        return hasil_4_foto
+            hasil_foto.append((file_links[idx_terpilih], idx_terpilih + 1, total_foto))
+        return hasil_foto
 
-    return [(DEFAULT_LINK, i + 1, 1) for i in range(4)]
+    return [(DEFAULT_LINK, i + 1, 1) for i in range(jumlah_giat)]
 
 def jalankan_robot_spkt():
     data_regu, putaran_piket = hitung_jadwal_regu_hari_ini()
@@ -117,9 +145,9 @@ def jalankan_robot_spkt():
     kirim_notif_telegram(
         f"🤖 Robot SPKT Polsek Jatisrono mulai berjalan...\n"
         f"👮 Piket Hari Ini: Regu {nomor_regu} ({nama_petugas})\n"
-        f"🔄 Putaran Piket ke-{putaran_piket + 1} (Mengambil 4 foto berurutan)"
+        f"🔄 Putaran Piket ke-{putaran_piket + 1} (Mengambil 6 foto berurutan)"
     )
-    
+
     with sync_playwright() as p:
         browser = p.chromium.launch(
             headless=True,
@@ -133,7 +161,7 @@ def jalankan_robot_spkt():
         page = context.new_page()
 
         try:
-            empat_foto = ambil_4_foto_harian_regu(page, folder_url, putaran_piket)
+            enam_foto = ambil_6_foto_harian_regu(page, folder_url, putaran_piket)
 
             page.goto("https://poskopbm.polri.go.id/input", timeout=60000, wait_until="domcontentloaded")
             page.wait_for_timeout(3000)
@@ -154,15 +182,20 @@ def jalankan_robot_spkt():
 
             for idx, item in enumerate(DAFTAR_KEGIATAN_SPKT):
                 kode = item["kode"]
+                nama_tab = item["tab"]
                 nama_giat = item["nama"]
-                link_foto, no_foto, tot_foto = empat_foto[idx]
+                link_foto, no_foto, tot_foto = enam_foto[idx]
 
+                # Jika sub-kegiatan belum terbuka di layar, klik tab Quick Wins-nya di bagian 2
                 if not page.get_by_text(nama_giat).first.is_visible():
-                    if page.get_by_role("button", name="Isi laporan").count() > 0:
-                        page.get_by_role("button", name="Isi laporan").first.click()
-                        page.wait_for_timeout(1500)
+                    tombol_tab = page.get_by_text(nama_tab).last
+                    tombol_tab.scroll_into_view_if_needed()
+                    tombol_tab.click()
+                    page.wait_for_timeout(2000)
 
-                page.get_by_text(nama_giat).first.click()
+                giat_el = page.get_by_text(nama_giat).first
+                giat_el.scroll_into_view_if_needed()
+                giat_el.click()
                 page.wait_for_timeout(2000)
 
                 # Isi Nama pejabat pelaksana
@@ -172,16 +205,18 @@ def jalankan_robot_spkt():
                 num_inputs = page.locator("input[type='number']")
                 for i in range(num_inputs.count()):
                     try:
-                        num_inputs.nth(i).fill("0")
+                        if num_inputs.nth(i).is_visible():
+                            num_inputs.nth(i).fill("0")
                     except Exception:
                         pass
 
-                # HAPUS / TUTUP KOTAK SARAN JIKA MUNCUL (Agar tidak wajib diisi uraiannya)
+                # HAPUS / TUTUP KOTAK SARAN JIKA MUNCUL (×)
                 try:
                     tombol_hapus_saran = page.locator("button").filter(has_text="×")
-                    if tombol_hapus_saran.count() > 0:
-                        tombol_hapus_saran.first.click()
-                        page.wait_for_timeout(1000)
+                    for i in range(tombol_hapus_saran.count()):
+                        if tombol_hapus_saran.nth(i).is_visible():
+                            tombol_hapus_saran.nth(i).click()
+                            page.wait_for_timeout(500)
                 except Exception:
                     pass
 
@@ -192,11 +227,16 @@ def jalankan_robot_spkt():
                         tombol_ada.first.click()
 
                 # Isi Link Google Drive
-                page.locator("input[placeholder*='drive.google.com']").fill(link_foto)
+                inputs_drive = page.locator("input[placeholder*='drive.google.com']")
+                for i in range(inputs_drive.count()):
+                    if inputs_drive.nth(i).is_visible():
+                        inputs_drive.nth(i).fill(link_foto)
                 page.wait_for_timeout(1000)
 
                 # Klik Kirim laporan
-                page.get_by_role("button", name="Kirim laporan").click()
+                btn_kirim = page.get_by_role("button", name="Kirim laporan")
+                btn_kirim.scroll_into_view_if_needed()
+                btn_kirim.click()
                 page.wait_for_timeout(4000)
 
                 ss_path = f"bukti_{kode.replace('.', '_')}.png"
