@@ -1,14 +1,16 @@
-name: Input Otomatis SPKT Harian
+name: Run Daily Bot SPKT
 
 on:
   schedule:
-    # Jalan otomatis 1 kali sehari pukul 09.00 WIB (02.00 UTC)
-    - cron: '0 2 * * *'
+    # Jalan otomatis setiap hari pukul 01.00 WIB dini hari (18:00 UTC)
+    - cron: '0 18 * * *'
   workflow_dispatch:
 
 jobs:
-  jalankan-bot-spkt:
+  run-bot:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Jakarta
     steps:
       - name: Ambil Kode
         uses: actions/checkout@v4
@@ -22,13 +24,12 @@ jobs:
         run: |
           pip install playwright requests
           playwright install chromium
-          playwright install-deps chromium
+          playwright install-deps
 
-      - name: Jalankan Robot SPKT
+      - name: Jalankan Bot SPKT
+        run: python bot_spkt.py
         env:
           POSKO_EMAIL: ${{ secrets.POSKO_EMAIL }}
           POSKO_PASSWORD: ${{ secrets.POSKO_PASSWORD }}
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          python bot_spkt.py
